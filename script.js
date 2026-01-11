@@ -30,6 +30,28 @@ const GOALS = {
     ]
 };
 
+// 敵陣の定義（成り判定用）
+const ENEMY_TERRITORY = {
+    [PLAYER.FIRST]: [6, 7, 8],   // 先手の敵陣は row 6, 7, 8
+    [PLAYER.SECOND]: [0, 1, 2]   // 後手の敵陣は row 0, 1, 2
+};
+
+// ドロップ禁止ゾーン（簡易オフサイド）
+const DROP_RESTRICTED_ROWS = {
+    [PLAYER.FIRST]: [7, 8],   // 先手は row 7, 8 にドロップ不可
+    [PLAYER.SECOND]: [0, 1]   // 後手は row 0, 1 にドロップ不可
+};
+
+// 成り後の駒名
+const PROMOTED_NAMES = {
+    [PIECE_TYPE.PAWN]: 'と',
+    [PIECE_TYPE.LANCE]: '成香',
+    [PIECE_TYPE.KNIGHT]: '成桂',
+    [PIECE_TYPE.SILVER]: '成銀',
+    [PIECE_TYPE.BISHOP]: '馬',
+    [PIECE_TYPE.ROOK]: '龍'
+};
+
 // ===== ゲーム状態 =====
 let gameState = {
     board: [],           // 盤面の駒配置
@@ -155,6 +177,8 @@ let resetBtn;
 let gameOverModal;
 let tutorialModal;
 let formationModal;
+let promotionModal;
+let toastElement;
 let localModeBtn;
 let aiModeBtn;
 
@@ -175,6 +199,8 @@ function init() {
     gameOverModal = document.getElementById('gameOverModal');
     tutorialModal = document.getElementById('tutorialModal');
     formationModal = document.getElementById('formationModal');
+    promotionModal = document.getElementById('promotionModal');
+    toastElement = document.getElementById('toast');
 
     // イベントリスナー
     moveBtn.addEventListener('click', () => setActionMode('move'));
@@ -301,7 +327,10 @@ function renderBoard() {
             if (piece) {
                 const pieceElement = document.createElement('div');
                 pieceElement.className = `piece ${piece.player}`;
-                pieceElement.textContent = piece.type;
+                if (piece.promoted) {
+                    pieceElement.classList.add('promoted');
+                }
+                pieceElement.textContent = getPieceDisplayName(piece);
 
                 // ボール保持表示
                 if (gameState.ball.holder &&
@@ -409,7 +438,21 @@ function attemptDrop(targetRow, targetCol) {
     }
 
     const pieceType = gameState.selectedDropPiece;
-    const currentPlayerBench = gameState.capturedPieces[gameState.currentPlayer];
+    const currentPlayer = gameState.currentPlayer;
+
+    // ドロップ制限チェック（簡易オフサイド）
+    if (isDropRestricted(currentPlayer, targetRow)) {
+        showToast('オフサイド：その位置には投入できません');
+        return;
+    }
+
+    // 二歩チェック
+    if (pieceType === PIECE_TYPE.PAWN && !canDropPawnInColumn(currentPlayer, targetCol)) {
+        showToast('二歩：同じ筋に歩は打てません');
+        return;
+    }
+
+    const currentPlayerBench = gameState.capturedPieces[currentPlayer];
 
     // ベンチから駒を減らす
     currentPlayerBench[pieceType]--;
@@ -507,11 +550,24 @@ function setActionMode(mode) {
 function highlightValidMoves() {
     renderBoard();
 
-    // ドロップモード：空きマスをハイライト
+    // ドロップモード：空きマスをハイライト（制限を考慮）
     if (gameState.isDropMode) {
+        const pieceType = gameState.selectedDropPiece;
+        const currentPlayer = gameState.currentPlayer;
+
         for (let row = 0; row < BOARD_SIZE; row++) {
             for (let col = 0; col < BOARD_SIZE; col++) {
                 if (!gameState.board[row][col]) {
+                    // ドロップ禁止ゾーンチェック（簡易オフサイド）
+                    if (isDropRestricted(currentPlayer, row)) {
+                        continue; // この行にはドロップ不可
+                    }
+
+                    // 二歩チェック（歩の場合のみ）
+                    if (pieceType === PIECE_TYPE.PAWN && !canDropPawnInColumn(currentPlayer, col)) {
+                        continue; // この列には既に歩がある
+                    }
+
                     const cell = boardElement.children[row * BOARD_SIZE + col];
                     cell.classList.add('valid-drop');
                 }
@@ -565,7 +621,7 @@ function highlightValidMoves() {
 // ===== 合法手取得 =====
 function getValidMoves(row, col, piece) {
     const moves = [];
-    const directions = getPieceDirections(piece.type, piece.player);
+    const directions = getPieceDirections(piece.type, piece.player, piece.promoted || false);
 
     directions.forEach(({ dr, dc, range }) => {
         for (let i = 1; i <= range; i++) {
@@ -626,10 +682,57 @@ function getValidPassTargets(row, col, piece) {
 }
 
 // ===== 駒の方向取得 =====
-function getPieceDirections(type, player) {
+function getPieceDirections(type, player, promoted = false) {
     // 先手は下向き（+row）、後手は上向き（-row）
     const forward = player === PLAYER.FIRST ? 1 : -1;
 
+    // 成り駒の動き
+    if (promoted) {
+        switch (type) {
+            case PIECE_TYPE.PAWN:
+            case PIECE_TYPE.LANCE:
+            case PIECE_TYPE.KNIGHT:
+            case PIECE_TYPE.SILVER:
+                // と金・成香・成桂・成銀：全て金と同じ動き
+                return [
+                    { dr: forward, dc: -1, range: 1 },  // 前左
+                    { dr: forward, dc: 0, range: 1 },   // 前
+                    { dr: forward, dc: 1, range: 1 },   // 前右
+                    { dr: 0, dc: -1, range: 1 },        // 左
+                    { dr: 0, dc: 1, range: 1 },         // 右
+                    { dr: -forward, dc: 0, range: 1 }   // 後ろ
+                ];
+            case PIECE_TYPE.BISHOP:
+                // 馬：角の動き + 前後左右1マス
+                return [
+                    { dr: -1, dc: -1, range: BOARD_SIZE },
+                    { dr: -1, dc: 1, range: BOARD_SIZE },
+                    { dr: 1, dc: -1, range: BOARD_SIZE },
+                    { dr: 1, dc: 1, range: BOARD_SIZE },
+                    { dr: -1, dc: 0, range: 1 },
+                    { dr: 1, dc: 0, range: 1 },
+                    { dr: 0, dc: -1, range: 1 },
+                    { dr: 0, dc: 1, range: 1 }
+                ];
+            case PIECE_TYPE.ROOK:
+                // 龍：飛の動き + 斜め1マス
+                return [
+                    { dr: -1, dc: 0, range: BOARD_SIZE },
+                    { dr: 1, dc: 0, range: BOARD_SIZE },
+                    { dr: 0, dc: -1, range: BOARD_SIZE },
+                    { dr: 0, dc: 1, range: BOARD_SIZE },
+                    { dr: -1, dc: -1, range: 1 },
+                    { dr: -1, dc: 1, range: 1 },
+                    { dr: 1, dc: -1, range: 1 },
+                    { dr: 1, dc: 1, range: 1 }
+                ];
+            default:
+                // その他（金・玉は成らない）
+                return getPieceDirections(type, player, false);
+        }
+    }
+
+    // 通常の駒の動き
     switch (type) {
         case PIECE_TYPE.KING:
             return [
@@ -750,8 +853,62 @@ function attemptMove(targetRow, targetCol) {
         return;
     }
 
+    // 成り判定（敵陣に入った場合）
+    if (!piece.promoted && canPromote(piece.type) && isInEnemyTerritory(piece.player, targetRow)) {
+        // 成りダイアログを表示
+        showPromotionDialog(targetRow, targetCol);
+        return;
+    }
+
     // ターン交代
     nextTurn();
+}
+
+// ===== 成り可能判定 =====
+function canPromote(pieceType) {
+    // 金と玉は成れない
+    return pieceType !== PIECE_TYPE.GOLD && pieceType !== PIECE_TYPE.KING;
+}
+
+// ===== 成りダイアログ表示 =====
+function showPromotionDialog(row, col) {
+    const piece = gameState.board[row][col];
+    const promotedName = PROMOTED_NAMES[piece.type];
+
+    document.getElementById('promotionMessage').textContent =
+        `${piece.type} を ${promotedName} に成りますか？`;
+
+    promotionModal.classList.add('show');
+
+    // ボタンイベント（一度だけ）
+    const promoteYesBtn = document.getElementById('promoteYesBtn');
+    const promoteNoBtn = document.getElementById('promoteNoBtn');
+
+    const handleYes = () => {
+        promotePiece(row, col);
+        promotionModal.classList.remove('show');
+        promoteYesBtn.removeEventListener('click', handleYes);
+        promoteNoBtn.removeEventListener('click', handleNo);
+        nextTurn();
+    };
+
+    const handleNo = () => {
+        promotionModal.classList.remove('show');
+        promoteYesBtn.removeEventListener('click', handleYes);
+        promoteNoBtn.removeEventListener('click', handleNo);
+        nextTurn();
+    };
+
+    promoteYesBtn.addEventListener('click', handleYes);
+    promoteNoBtn.addEventListener('click', handleNo);
+}
+
+// ===== 駒を成る =====
+function promotePiece(row, col) {
+    const piece = gameState.board[row][col];
+    piece.promoted = true;
+    addLog(`${piece.player === PLAYER.FIRST ? '先手' : '後手'}：${piece.type}が成って${PROMOTED_NAMES[piece.type]}になりました！`);
+    renderBoard();
 }
 
 // ===== パス試行 =====
@@ -964,6 +1121,46 @@ function isGoalCell(row, col, player) {
     return GOALS[player].some(g => g.row === row && g.col === col);
 }
 
+// ===== トースト通知 =====
+function showToast(message) {
+    toastElement.textContent = message;
+    toastElement.classList.add('show');
+
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+    }, 3000);
+}
+
+// ===== ドロップ制限チェック（簡易オフサイド） =====
+function isDropRestricted(player, row) {
+    return DROP_RESTRICTED_ROWS[player].includes(row);
+}
+
+// ===== 二歩チェック =====
+function canDropPawnInColumn(player, col) {
+    // 指定列に既に歩（または成った歩）が存在するかチェック
+    for (let row = 0; row < BOARD_SIZE; row++) {
+        const piece = gameState.board[row][col];
+        if (piece && piece.player === player && piece.type === PIECE_TYPE.PAWN) {
+            return false; // 既に歩がある
+        }
+    }
+    return true; // 歩がない＝ドロップ可能
+}
+
+// ===== 敵陣判定 =====
+function isInEnemyTerritory(player, row) {
+    return ENEMY_TERRITORY[player].includes(row);
+}
+
+// ===== 駒の表示名取得（成り対応） =====
+function getPieceDisplayName(piece) {
+    if (piece.promoted && PROMOTED_NAMES[piece.type]) {
+        return PROMOTED_NAMES[piece.type];
+    }
+    return piece.type;
+}
+
 // ===== AI思考ロジック =====
 function executeAITurn() {
     gameState.aiThinking = true;
@@ -1030,10 +1227,20 @@ function findBestAIMove() {
     const aiBench = gameState.capturedPieces[PLAYER.SECOND];
     Object.entries(aiBench).forEach(([pieceType, count]) => {
         if (count > 0) {
-            // 空きマス全てにドロップ可能
+            // 空きマス全てにドロップ可能（制限を考慮）
             for (let row = 0; row < BOARD_SIZE; row++) {
+                // ドロップ禁止ゾーンをスキップ
+                if (isDropRestricted(PLAYER.SECOND, row)) {
+                    continue;
+                }
+
                 for (let col = 0; col < BOARD_SIZE; col++) {
                     if (!gameState.board[row][col]) {
+                        // 二歩チェック
+                        if (pieceType === PIECE_TYPE.PAWN && !canDropPawnInColumn(PLAYER.SECOND, col)) {
+                            continue;
+                        }
+
                         allMoves.push({
                             type: 'drop',
                             pieceType,
@@ -1224,6 +1431,12 @@ function executeAIMove(move) {
         // ゴール判定
         if (checkGoal(move.toRow, move.toCol)) {
             return;
+        }
+
+        // AI成り判定（敵陣に入った場合）
+        if (!move.piece.promoted && canPromote(move.piece.type) && isInEnemyTerritory(PLAYER.SECOND, move.toRow)) {
+            // AIは基本的に成る（成ったほうが強いため）
+            promotePiece(move.toRow, move.toCol);
         }
 
         // ターン交代

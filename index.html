@@ -139,8 +139,8 @@
                         <h3>3行まとめ</h3>
                         <ol class="tutorial-summary">
                             <li>将棋の駒を動かしてボールを相手ゴール（最下段の赤3マス）に運ぶ</li>
-                            <li>駒タップ → <strong style="color: #3498db;">青</strong>=移動、<strong style="color: #2ecc71;">緑</strong>=パス、<strong style="color: #e74c3c;">赤</strong>=捕獲、<strong style="color: #9b59b6;">紫</strong>=ベンチから投入</li>
-                            <li>捕獲した駒はベンチに入り、後で盤面に投入できます</li>
+                            <li>駒タップ → <strong style="color: #3498db;">青</strong>=移動、<strong style="color: #2ecc71;">緑</strong>=パス、<strong style="color: #e74c3c;">赤</strong>=捕獲、<strong style="color: #9b59b6;">紫</strong>=ベンチから投入、敵陣で<strong style="color: #f39c12;">成り</strong></li>
+                            <li>捕獲した駒はベンチに入り投入可能（簡易オフサイド・二歩禁止あり）</li>
                         </ol>
                         <h3>最初の一手を試してみましょう</h3>
                         <p class="tutorial-hint">中央の⚽をタップして、ボールを取ってみましょう！</p>
@@ -161,6 +161,21 @@
                     <button id="gameOverResetBtn" class="btn btn-primary">もう一度プレイ</button>
                 </div>
             </div>
+
+            <!-- 成りモーダル -->
+            <div id="promotionModal" class="modal">
+                <div class="modal-content promotion-content">
+                    <h2>🎊 成り</h2>
+                    <p id="promotionMessage">この駒を成りますか？</p>
+                    <div class="promotion-buttons">
+                        <button id="promoteYesBtn" class="btn btn-primary">成る</button>
+                        <button id="promoteNoBtn" class="btn btn-cancel">成らない</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- トースト通知 -->
+            <div id="toast" class="toast"></div>
         </main>
 
         <footer>
@@ -171,8 +186,8 @@
                         <h3>3行まとめ</h3>
                         <ol>
                             <li>将棋の駒を動かしてボールを相手ゴールに運ぶ</li>
-                            <li>駒タップ → 青=移動、緑=パス、赤=捕獲、紫=ベンチから投入</li>
-                            <li>捕獲した駒はベンチに入り、後で投入できます</li>
+                            <li>駒タップ → 青=移動、緑=パス、赤=捕獲、紫=ベンチから投入、敵陣で成り</li>
+                            <li>捕獲した駒はベンチに入り投入可能（簡易オフサイド・二歩禁止あり）</li>
                         </ol>
                     </div>
                     <h3>基本ルール</h3>
@@ -181,7 +196,18 @@
                         <li><strong>オウンゴール：</strong>ボールが自分のゴールに到達すると敗北</li>
                         <li><strong>操作：</strong>駒をタップして選択 → 移動先をタップ</li>
                         <li><strong>パス：</strong>ボール保持駒を選択後、緑/金枠のマスをタップでパス（視線ベース・8方向）</li>
-                        <li><strong>ベンチ：</strong>捕獲した駒はベンチに追加され、空きマスに投入できます</li>
+                        <li><strong>ベンチ：</strong>捕獲した駒はベンチに追加され、空きマスに投入できます
+                            <ul>
+                                <li>簡易オフサイド：相手陣最深部2行にはドロップ不可</li>
+                                <li>二歩禁止：同じ列に既に歩がある場合、その列に歩をドロップ不可</li>
+                            </ul>
+                        </li>
+                        <li><strong>成り：</strong>敵陣（最深部3行）に侵入すると駒を成れます
+                            <ul>
+                                <li>歩/香/桂/銀→金の動き、角→馬、飛→龍</li>
+                                <li>成った駒は右下に金色ドット表示</li>
+                            </ul>
+                        </li>
                         <li><strong>駒の動き：</strong>将棋のルールに準拠（玉・飛・角・歩）</li>
                         <li><strong>捕獲：</strong>相手駒のマス（赤枠）に移動すると捕獲できます</li>
                     </ul>

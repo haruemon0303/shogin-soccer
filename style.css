@@ -941,6 +941,61 @@ details summary:hover {
     line-height: 1.5;
 }
 
+/* トースト通知 */
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    max-width: 90%;
+    text-align: center;
+}
+
+.toast.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 成りモーダル */
+.promotion-content {
+    max-width: 90%;
+    width: 350px;
+}
+
+.promotion-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.promotion-buttons .btn {
+    flex: 1;
+}
+
+/* 成り駒の表示 */
+.piece.promoted::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background: #f39c12;
+    border-radius: 50%;
+    border: 1px solid white;
+}
+
 /* レスポンシブ調整 */
 @media (max-width: 480px) {
     header h1 {
