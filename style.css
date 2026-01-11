@@ -43,39 +43,73 @@ header h1 {
 /* メインエリア */
 main {
     padding: 20px;
+    padding-top: 10px;
 }
 
-/* ゲーム情報 */
-.game-info {
+/* 手番バー（固定表示） */
+.turn-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    padding: 12px 20px;
     display: flex;
-    justify-content: space-around;
-    margin-bottom: 15px;
-    padding: 12px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    font-size: 0.95rem;
-}
-
-.turn-info, .ball-info {
-    display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease;
 }
 
-.turn-label, .ball-label {
-    font-size: 0.8rem;
-    color: #666;
-    margin-bottom: 3px;
+.turn-bar.first-turn {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
 }
 
-.turn-player {
+.turn-bar.second-turn {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.turn-bar.turn-change {
+    animation: turnFlash 0.6s ease;
+}
+
+@keyframes turnFlash {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.02);
+    }
+}
+
+.turn-indicator {
+    flex: 1;
+}
+
+.turn-text {
+    color: white;
+    font-size: 1.2rem;
     font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ball-info-compact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+.ball-icon {
     font-size: 1.1rem;
 }
 
-.ball-holder {
-    font-weight: bold;
-    color: #f39c12;
+.ball-holder-compact {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 /* 操作ガイド */
@@ -103,11 +137,28 @@ main {
     line-height: 1.4;
 }
 
+/* 盤面ラッパー */
+.board-wrapper {
+    margin-bottom: 15px;
+}
+
 /* 盤面コンテナ */
 .board-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: box-shadow 0.3s ease;
+}
+
+/* 盤面外枠のグロー（手番色） */
+.board-wrapper.first-turn .board-container {
+    box-shadow: 0 0 20px rgba(52, 152, 219, 0.5);
+}
+
+.board-wrapper.second-turn .board-container {
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
 }
 
 /* 盤面 */
@@ -119,8 +170,8 @@ main {
     background: #444;
     border: 3px solid #333;
     border-radius: 4px;
-    max-width: 100%;
-    aspect-ratio: 1 / 1;
+    width: min(90vw, 500px);
+    height: min(90vw, 500px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -267,18 +318,18 @@ main {
     }
 }
 
-/* ボールインジケーター */
+/* ボールインジケーター（サッカーボール柄） */
 .ball-indicator {
     position: absolute;
-    top: -3px;
-    right: -3px;
-    width: 12px;
-    height: 12px;
-    background: #f39c12;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     animation: bounce 0.6s infinite alternate;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="white" stroke="black" stroke-width="2"/><path d="M50 10 L35 35 L50 35 L65 35 L50 10z" fill="black"/><path d="M20 30 L10 50 L30 60 L35 35 L20 30z" fill="black"/><path d="M80 30 L90 50 L70 60 L65 35 L80 30z" fill="black"/><path d="M30 60 L20 80 L40 90 L50 70 L30 60z" fill="black"/><path d="M70 60 L80 80 L60 90 L50 70 L70 60z" fill="black"/></svg>') center/cover;
 }
 
 @keyframes bounce {
@@ -503,6 +554,109 @@ main {
     font-size: 1.1rem;
     margin-bottom: 20px;
     color: #555;
+}
+
+/* 駒の凡例 */
+.piece-legend {
+    margin-top: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+.piece-legend summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
+    user-select: none;
+    padding: 4px;
+}
+
+.piece-legend summary:hover {
+    color: #333;
+}
+
+.legend-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #ddd;
+}
+
+.legend-item {
+    font-size: 0.8rem;
+    color: #555;
+    display: flex;
+    align-items: center;
+}
+
+.legend-piece {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    line-height: 20px;
+    font-weight: bold;
+    font-size: 0.7rem;
+    border-radius: 3px;
+    margin-right: 6px;
+}
+
+/* 配置選択モーダル */
+.formation-content {
+    max-width: 95%;
+    width: 500px;
+}
+
+.formation-desc {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.formation-options {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.formation-btn {
+    flex: 1;
+    min-width: 200px;
+    padding: 20px;
+    background: white;
+    border: 3px solid #ddd;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.formation-btn:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+}
+
+.formation-btn h3 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.formation-btn p {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.formation-btn small {
+    font-size: 0.8rem;
+    color: #999;
 }
 
 /* チュートリアルモーダル */

@@ -13,18 +13,18 @@
             <p class="subtitle">将棋×サッカー タクティカルゲーム</p>
         </header>
 
-        <main>
-            <!-- ゲーム情報 -->
-            <div class="game-info">
-                <div class="turn-info">
-                    <span class="turn-label">手番:</span>
-                    <span class="turn-player" id="turnPlayer">先手（青）</span>
-                </div>
-                <div class="ball-info">
-                    <span class="ball-label">ボール:</span>
-                    <span class="ball-holder" id="ballHolder">中央</span>
-                </div>
+        <!-- 手番バー（固定表示） -->
+        <div class="turn-bar" id="turnBar">
+            <div class="turn-indicator">
+                <span class="turn-text" id="turnText">先手（青）の番</span>
             </div>
+            <div class="ball-info-compact">
+                <span class="ball-icon">⚽</span>
+                <span class="ball-holder-compact" id="ballHolderCompact">中央</span>
+            </div>
+        </div>
+
+        <main>
 
             <!-- 操作ガイド -->
             <div class="action-guide" id="actionGuide">
@@ -33,10 +33,27 @@
             </div>
 
             <!-- 盤面 -->
-            <div class="board-container">
-                <div class="board" id="board">
-                    <!-- 9x9 = 81マスを動的に生成 -->
+            <div class="board-wrapper" id="boardWrapper">
+                <div class="board-container">
+                    <div class="board" id="board">
+                        <!-- 9x9 = 81マスを動的に生成 -->
+                    </div>
                 </div>
+
+                <!-- 駒の凡例 -->
+                <details class="piece-legend">
+                    <summary>駒の種類（タップで開く）</summary>
+                    <div class="legend-content">
+                        <div class="legend-item"><span class="legend-piece">玉</span> = 玉（全方向1マス）</div>
+                        <div class="legend-item"><span class="legend-piece">飛</span> = 飛車（縦横に直進）</div>
+                        <div class="legend-item"><span class="legend-piece">角</span> = 角（斜めに直進）</div>
+                        <div class="legend-item"><span class="legend-piece">金</span> = 金（斜め後ろ以外）</div>
+                        <div class="legend-item"><span class="legend-piece">銀</span> = 銀（前と斜め）</div>
+                        <div class="legend-item"><span class="legend-piece">桂</span> = 桂馬（前2左右1）</div>
+                        <div class="legend-item"><span class="legend-piece">香</span> = 香車（前方直進）</div>
+                        <div class="legend-item"><span class="legend-piece">歩</span> = 歩（前1マス）</div>
+                    </div>
+                </details>
             </div>
 
             <!-- 確認バー（選択時に表示） -->
@@ -64,6 +81,26 @@
                 <h3>ゲームログ</h3>
                 <div id="logContent" class="log-content">
                     <p>ゲーム開始！先手（青）の番です。</p>
+                </div>
+            </div>
+
+            <!-- 配置選択モーダル -->
+            <div id="formationModal" class="modal show">
+                <div class="modal-content formation-content">
+                    <h2>⚽ 初期配置を選択</h2>
+                    <p class="formation-desc">駒の初期配置を選んでゲームを開始します</p>
+                    <div class="formation-options">
+                        <button class="formation-btn" id="shogiFormationBtn">
+                            <h3>🎴 将棋配置</h3>
+                            <p>標準的な将棋の駒配置</p>
+                            <small>玉1・飛1・角1・金2・銀2・桂2・香2・歩9</small>
+                        </button>
+                        <button class="formation-btn" id="soccerFormationBtn">
+                            <h3>⚽ サッカー配置</h3>
+                            <p>中央寄せ4-4-2風フォーメーション</p>
+                            <small>玉1・飛1・角1・金2・銀2・歩9</small>
+                        </button>
+                    </div>
                 </div>
             </div>
 

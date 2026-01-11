@@ -9,6 +9,10 @@ const PIECE_TYPE = {
     KING: '玉',    // 玉（GK）
     ROOK: '飛',    // 飛車（FW）
     BISHOP: '角',  // 角（MF）
+    GOLD: '金',    // 金（DF）
+    SILVER: '銀',  // 銀（MF）
+    KNIGHT: '桂',  // 桂馬（FW）
+    LANCE: '香',   // 香車（DF）
     PAWN: '歩'     // 歩（FW）
 };
 
@@ -34,33 +38,106 @@ let gameState = {
     selectedPiece: null, // 選択中の駒
     isPassMode: false,   // パスモード
     gameOver: false,
-    winner: null
+    winner: null,
+    formationType: null  // 選択された配置タイプ
 };
 
-// ===== 初期配置 =====
-const INITIAL_SETUP = {
+// ===== 初期配置（将棋配置） =====
+const SHOGI_FORMATION = {
     [PLAYER.FIRST]: [
         { type: PIECE_TYPE.KING, row: 0, col: 4 },
-        { type: PIECE_TYPE.ROOK, row: 2, col: 4 },
-        { type: PIECE_TYPE.BISHOP, row: 2, col: 2 },
-        { type: PIECE_TYPE.PAWN, row: 3, col: 3 },
-        { type: PIECE_TYPE.PAWN, row: 3, col: 4 },
-        { type: PIECE_TYPE.PAWN, row: 3, col: 5 }
+        { type: PIECE_TYPE.ROOK, row: 1, col: 7 },
+        { type: PIECE_TYPE.BISHOP, row: 1, col: 1 },
+        { type: PIECE_TYPE.GOLD, row: 0, col: 3 },
+        { type: PIECE_TYPE.GOLD, row: 0, col: 5 },
+        { type: PIECE_TYPE.SILVER, row: 0, col: 2 },
+        { type: PIECE_TYPE.SILVER, row: 0, col: 6 },
+        { type: PIECE_TYPE.KNIGHT, row: 0, col: 1 },
+        { type: PIECE_TYPE.KNIGHT, row: 0, col: 7 },
+        { type: PIECE_TYPE.LANCE, row: 0, col: 0 },
+        { type: PIECE_TYPE.LANCE, row: 0, col: 8 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 0 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 1 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 2 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 3 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 4 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 5 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 6 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 7 },
+        { type: PIECE_TYPE.PAWN, row: 2, col: 8 }
     ],
     [PLAYER.SECOND]: [
         { type: PIECE_TYPE.KING, row: 8, col: 4 },
-        { type: PIECE_TYPE.ROOK, row: 6, col: 4 },
-        { type: PIECE_TYPE.BISHOP, row: 6, col: 6 },
-        { type: PIECE_TYPE.PAWN, row: 5, col: 3 },
+        { type: PIECE_TYPE.ROOK, row: 7, col: 1 },
+        { type: PIECE_TYPE.BISHOP, row: 7, col: 7 },
+        { type: PIECE_TYPE.GOLD, row: 8, col: 3 },
+        { type: PIECE_TYPE.GOLD, row: 8, col: 5 },
+        { type: PIECE_TYPE.SILVER, row: 8, col: 2 },
+        { type: PIECE_TYPE.SILVER, row: 8, col: 6 },
+        { type: PIECE_TYPE.KNIGHT, row: 8, col: 1 },
+        { type: PIECE_TYPE.KNIGHT, row: 8, col: 7 },
+        { type: PIECE_TYPE.LANCE, row: 8, col: 0 },
+        { type: PIECE_TYPE.LANCE, row: 8, col: 8 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 0 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 1 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 2 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 3 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 4 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 5 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 6 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 7 },
+        { type: PIECE_TYPE.PAWN, row: 6, col: 8 }
+    ]
+};
+
+// ===== 初期配置（サッカー配置 4-4-2風） =====
+const SOCCER_FORMATION = {
+    [PLAYER.FIRST]: [
+        { type: PIECE_TYPE.KING, row: 0, col: 4 },
+        { type: PIECE_TYPE.ROOK, row: 3, col: 3 },
+        { type: PIECE_TYPE.ROOK, row: 3, col: 5 },
+        { type: PIECE_TYPE.BISHOP, row: 2, col: 4 },
+        { type: PIECE_TYPE.GOLD, row: 1, col: 2 },
+        { type: PIECE_TYPE.GOLD, row: 1, col: 6 },
+        { type: PIECE_TYPE.SILVER, row: 2, col: 1 },
+        { type: PIECE_TYPE.SILVER, row: 2, col: 7 },
+        { type: PIECE_TYPE.PAWN, row: 3, col: 0 },
+        { type: PIECE_TYPE.PAWN, row: 3, col: 2 },
+        { type: PIECE_TYPE.PAWN, row: 3, col: 4 },
+        { type: PIECE_TYPE.PAWN, row: 3, col: 6 },
+        { type: PIECE_TYPE.PAWN, row: 3, col: 8 },
+        { type: PIECE_TYPE.PAWN, row: 1, col: 3 },
+        { type: PIECE_TYPE.PAWN, row: 1, col: 4 },
+        { type: PIECE_TYPE.PAWN, row: 1, col: 5 },
+        { type: PIECE_TYPE.PAWN, row: 0, col: 1 }
+    ],
+    [PLAYER.SECOND]: [
+        { type: PIECE_TYPE.KING, row: 8, col: 4 },
+        { type: PIECE_TYPE.ROOK, row: 5, col: 3 },
+        { type: PIECE_TYPE.ROOK, row: 5, col: 5 },
+        { type: PIECE_TYPE.BISHOP, row: 6, col: 4 },
+        { type: PIECE_TYPE.GOLD, row: 7, col: 2 },
+        { type: PIECE_TYPE.GOLD, row: 7, col: 6 },
+        { type: PIECE_TYPE.SILVER, row: 6, col: 1 },
+        { type: PIECE_TYPE.SILVER, row: 6, col: 7 },
+        { type: PIECE_TYPE.PAWN, row: 5, col: 0 },
+        { type: PIECE_TYPE.PAWN, row: 5, col: 2 },
         { type: PIECE_TYPE.PAWN, row: 5, col: 4 },
-        { type: PIECE_TYPE.PAWN, row: 5, col: 5 }
+        { type: PIECE_TYPE.PAWN, row: 5, col: 6 },
+        { type: PIECE_TYPE.PAWN, row: 5, col: 8 },
+        { type: PIECE_TYPE.PAWN, row: 7, col: 3 },
+        { type: PIECE_TYPE.PAWN, row: 7, col: 4 },
+        { type: PIECE_TYPE.PAWN, row: 7, col: 5 },
+        { type: PIECE_TYPE.PAWN, row: 8, col: 7 }
     ]
 };
 
 // ===== DOM要素 =====
 let boardElement;
-let turnPlayerElement;
-let ballHolderElement;
+let boardWrapperElement;
+let turnBarElement;
+let turnTextElement;
+let ballHolderCompactElement;
 let logContentElement;
 let guideTextElement;
 let moveBtn;
@@ -69,13 +146,16 @@ let cancelBtn;
 let resetBtn;
 let gameOverModal;
 let tutorialModal;
+let formationModal;
 
 // ===== 初期化 =====
 function init() {
     // DOM要素取得
     boardElement = document.getElementById('board');
-    turnPlayerElement = document.getElementById('turnPlayer');
-    ballHolderElement = document.getElementById('ballHolder');
+    boardWrapperElement = document.getElementById('boardWrapper');
+    turnBarElement = document.getElementById('turnBar');
+    turnTextElement = document.getElementById('turnText');
+    ballHolderCompactElement = document.getElementById('ballHolderCompact');
     logContentElement = document.getElementById('logContent');
     guideTextElement = document.getElementById('guideText');
     moveBtn = document.getElementById('moveBtn');
@@ -84,17 +164,33 @@ function init() {
     resetBtn = document.getElementById('resetBtn');
     gameOverModal = document.getElementById('gameOverModal');
     tutorialModal = document.getElementById('tutorialModal');
+    formationModal = document.getElementById('formationModal');
 
     // イベントリスナー
     moveBtn.addEventListener('click', () => setActionMode('move'));
     passBtn.addEventListener('click', () => setActionMode('pass'));
     cancelBtn.addEventListener('click', cancelSelection);
-    resetBtn.addEventListener('click', resetGame);
+    resetBtn.addEventListener('click', showFormationSelection);
     document.getElementById('gameOverResetBtn').addEventListener('click', () => {
         gameOverModal.classList.remove('show');
-        resetGame();
+        showFormationSelection();
     });
     document.getElementById('tutorialCloseBtn').addEventListener('click', closeTutorial);
+    document.getElementById('shogiFormationBtn').addEventListener('click', () => startGameWithFormation('shogi'));
+    document.getElementById('soccerFormationBtn').addEventListener('click', () => startGameWithFormation('soccer'));
+
+    // 配置選択から開始
+    showFormationSelection();
+}
+
+// ===== 配置選択 =====
+function showFormationSelection() {
+    formationModal.classList.add('show');
+}
+
+function startGameWithFormation(formationType) {
+    gameState.formationType = formationType;
+    formationModal.classList.remove('show');
 
     // チュートリアル表示
     showTutorialIfFirstTime();
@@ -124,9 +220,10 @@ function resetGame() {
     // 盤面初期化
     gameState.board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
 
-    // 駒配置
-    for (const player in INITIAL_SETUP) {
-        INITIAL_SETUP[player].forEach(({ type, row, col }) => {
+    // 選択された配置で駒配置
+    const formation = gameState.formationType === 'shogi' ? SHOGI_FORMATION : SOCCER_FORMATION;
+    for (const player in formation) {
+        formation[player].forEach(({ type, row, col }) => {
             gameState.board[row][col] = { type, player };
         });
     }
@@ -140,7 +237,8 @@ function resetGame() {
     gameState.winner = null;
 
     // ログクリア
-    logContentElement.innerHTML = '<p>ゲーム開始！先手（青）の番です。</p>';
+    const formationName = gameState.formationType === 'shogi' ? '将棋配置' : 'サッカー配置';
+    logContentElement.innerHTML = `<p>ゲーム開始！${formationName}で対戦します。</p><p>先手（青）の番です。</p>`;
 
     // 盤面描画
     renderBoard();
@@ -377,6 +475,34 @@ function getPieceDirections(type, player) {
                 { dr: 1, dc: -1, range: BOARD_SIZE },
                 { dr: 1, dc: 1, range: BOARD_SIZE }
             ];
+        case PIECE_TYPE.GOLD:
+            // 金：斜め後ろ以外の6方向
+            return [
+                { dr: forward, dc: -1, range: 1 },  // 前左
+                { dr: forward, dc: 0, range: 1 },   // 前
+                { dr: forward, dc: 1, range: 1 },   // 前右
+                { dr: 0, dc: -1, range: 1 },        // 左
+                { dr: 0, dc: 1, range: 1 },         // 右
+                { dr: -forward, dc: 0, range: 1 }   // 後ろ
+            ];
+        case PIECE_TYPE.SILVER:
+            // 銀：前3方向と斜め後ろ2方向
+            return [
+                { dr: forward, dc: -1, range: 1 },   // 前左
+                { dr: forward, dc: 0, range: 1 },    // 前
+                { dr: forward, dc: 1, range: 1 },    // 前右
+                { dr: -forward, dc: -1, range: 1 },  // 後ろ左
+                { dr: -forward, dc: 1, range: 1 }    // 後ろ右
+            ];
+        case PIECE_TYPE.KNIGHT:
+            // 桂馬：前2マス左右1マス
+            return [
+                { dr: forward * 2, dc: -1, range: 1 },
+                { dr: forward * 2, dc: 1, range: 1 }
+            ];
+        case PIECE_TYPE.LANCE:
+            // 香車：前方に直進
+            return [{ dr: forward, dc: 0, range: BOARD_SIZE }];
         case PIECE_TYPE.PAWN:
             return [{ dr: forward, dc: 0, range: 1 }];
         default:
@@ -518,6 +644,13 @@ function nextTurn() {
         : PLAYER.FIRST;
     gameState.selectedPiece = null;
     gameState.isPassMode = false;
+
+    // 手番バーのアニメーション
+    turnBarElement.classList.add('turn-change');
+    setTimeout(() => {
+        turnBarElement.classList.remove('turn-change');
+    }, 600);
+
     renderBoard();
     updateUI();
 }
@@ -539,18 +672,26 @@ function endGame(winner, message) {
 
 // ===== UI更新 =====
 function updateUI() {
-    // 手番表示
-    turnPlayerElement.textContent = gameState.currentPlayer === PLAYER.FIRST
-        ? '先手（青）'
-        : '後手（赤）';
+    // 手番バーの更新
+    turnTextElement.textContent = gameState.currentPlayer === PLAYER.FIRST
+        ? '先手（青）の番'
+        : '後手（赤）の番';
 
-    // ボール保持者表示
+    // 手番バーの背景色変更
+    turnBarElement.className = 'turn-bar ' +
+        (gameState.currentPlayer === PLAYER.FIRST ? 'first-turn' : 'second-turn');
+
+    // 盤面外枠のグロー更新
+    boardWrapperElement.className = 'board-wrapper ' +
+        (gameState.currentPlayer === PLAYER.FIRST ? 'first-turn' : 'second-turn');
+
+    // ボール保持者表示（コンパクト版）
     if (gameState.ball.holder) {
         const { row, col } = gameState.ball.holder;
         const piece = gameState.board[row][col];
-        ballHolderElement.textContent = `${piece.player === PLAYER.FIRST ? '先手' : '後手'}の${piece.type}`;
+        ballHolderCompactElement.textContent = `${piece.player === PLAYER.FIRST ? '先手' : '後手'}の${piece.type}`;
     } else {
-        ballHolderElement.textContent = `盤面(${gameState.ball.row},${gameState.ball.col})`;
+        ballHolderCompactElement.textContent = `中央`;
     }
 
     // ガイドテキスト更新
