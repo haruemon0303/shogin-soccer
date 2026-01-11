@@ -56,6 +56,14 @@
                 </details>
             </div>
 
+            <!-- ベンチ（捕獲した駒） -->
+            <div class="bench-section" id="benchSection">
+                <h3 class="bench-title">🏟️ ベンチ（交代投入）</h3>
+                <div class="bench-pieces" id="benchPieces">
+                    <!-- 動的に生成 -->
+                </div>
+            </div>
+
             <!-- 確認バー（選択時に表示） -->
             <div class="action-bar" id="actionBar">
                 <button id="moveBtn" class="action-btn action-move" disabled>
@@ -131,8 +139,8 @@
                         <h3>3行まとめ</h3>
                         <ol class="tutorial-summary">
                             <li>将棋の駒を動かしてボールを相手ゴール（最下段の赤3マス）に運ぶ</li>
-                            <li>駒をタップ → <strong style="color: #3498db;">青マス</strong>で移動、<strong style="color: #2ecc71;">緑マス</strong>でパス、<strong style="color: #e74c3c;">赤枠</strong>で捕獲</li>
-                            <li>ボールを持った駒は<strong style="color: #f39c12;">⚽マーク</strong>が付きます</li>
+                            <li>駒タップ → <strong style="color: #3498db;">青</strong>=移動、<strong style="color: #2ecc71;">緑</strong>=パス、<strong style="color: #e74c3c;">赤</strong>=捕獲、<strong style="color: #9b59b6;">紫</strong>=ベンチから投入</li>
+                            <li>捕獲した駒はベンチに入り、後で盤面に投入できます</li>
                         </ol>
                         <h3>最初の一手を試してみましょう</h3>
                         <p class="tutorial-hint">中央の⚽をタップして、ボールを取ってみましょう！</p>
@@ -163,8 +171,8 @@
                         <h3>3行まとめ</h3>
                         <ol>
                             <li>将棋の駒を動かしてボールを相手ゴールに運ぶ</li>
-                            <li>駒タップ → 青マス=移動、緑マス=パス、赤枠=捕獲</li>
-                            <li>ボール保持者には⚽マークが付きます</li>
+                            <li>駒タップ → 青=移動、緑=パス、赤=捕獲、紫=ベンチから投入</li>
+                            <li>捕獲した駒はベンチに入り、後で投入できます</li>
                         </ol>
                     </div>
                     <h3>基本ルール</h3>
@@ -173,6 +181,7 @@
                         <li><strong>オウンゴール：</strong>ボールが自分のゴールに到達すると敗北</li>
                         <li><strong>操作：</strong>駒をタップして選択 → 移動先をタップ</li>
                         <li><strong>パス：</strong>ボール保持駒を選択後、緑/金枠のマスをタップでパス（視線ベース・8方向）</li>
+                        <li><strong>ベンチ：</strong>捕獲した駒はベンチに追加され、空きマスに投入できます</li>
                         <li><strong>駒の動き：</strong>将棋のルールに準拠（玉・飛・角・歩）</li>
                         <li><strong>捕獲：</strong>相手駒のマス（赤枠）に移動すると捕獲できます</li>
                     </ul>
@@ -187,6 +196,7 @@
                         <li><strong style="color: #2ecc71;">緑マス：</strong>パス可能な空きマス（スルーパス）</li>
                         <li><strong style="color: #f39c12;">金枠：</strong>パス可能な味方駒（味方へのパス）</li>
                         <li><strong style="color: #e74c3c;">赤枠：</strong>捕獲可能な相手駒</li>
+                        <li><strong style="color: #9b59b6;">紫マス：</strong>ベンチから配置可能な空きマス</li>
                     </ul>
                 </div>
             </details>

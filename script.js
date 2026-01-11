@@ -41,7 +41,13 @@ let gameState = {
     winner: null,
     formationType: null, // 選択された配置タイプ
     isAIMode: false,     // AI対戦モード
-    aiThinking: false    // AI思考中
+    aiThinking: false,   // AI思考中
+    capturedPieces: {    // ベンチ（捕獲した駒）
+        [PLAYER.FIRST]: {},
+        [PLAYER.SECOND]: {}
+    },
+    isDropMode: false,   // ドロップモード
+    selectedDropPiece: null // ドロップ選択中の駒種
 };
 
 // ===== 初期配置（将棋配置） =====
@@ -255,6 +261,12 @@ function resetGame() {
     gameState.gameOver = false;
     gameState.winner = null;
     gameState.aiThinking = false;
+    gameState.capturedPieces = {
+        [PLAYER.FIRST]: {},
+        [PLAYER.SECOND]: {}
+    };
+    gameState.isDropMode = false;
+    gameState.selectedDropPiece = null;
 
     // ログクリア
     const formationName = gameState.formationType === 'shogi' ? '将棋配置' : 'サッカー配置';
@@ -320,6 +332,112 @@ function renderBoard() {
     }
 }
 
+// ===== ベンチ描画 =====
+function renderBench() {
+    const benchPiecesElement = document.getElementById('benchPieces');
+    benchPiecesElement.innerHTML = '';
+
+    const currentPlayerBench = gameState.capturedPieces[gameState.currentPlayer];
+    const hasPieces = Object.keys(currentPlayerBench).some(type => currentPlayerBench[type] > 0);
+
+    if (!hasPieces) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'bench-empty';
+        emptyMessage.textContent = '捕獲した駒がベンチに表示されます';
+        benchPiecesElement.appendChild(emptyMessage);
+        return;
+    }
+
+    // 駒種ごとにボタンを生成
+    Object.entries(currentPlayerBench).forEach(([pieceType, count]) => {
+        if (count > 0) {
+            const pieceElement = document.createElement('div');
+            pieceElement.className = `bench-piece ${gameState.currentPlayer}`;
+            if (gameState.isDropMode && gameState.selectedDropPiece === pieceType) {
+                pieceElement.classList.add('selected');
+            }
+            pieceElement.textContent = pieceType;
+
+            // 所持数表示
+            const countElement = document.createElement('div');
+            countElement.className = 'bench-piece-count';
+            countElement.textContent = count;
+            pieceElement.appendChild(countElement);
+
+            // クリックイベント
+            pieceElement.addEventListener('click', () => selectDropPiece(pieceType));
+
+            benchPiecesElement.appendChild(pieceElement);
+        }
+    });
+}
+
+// ===== ドロップする駒を選択 =====
+function selectDropPiece(pieceType) {
+    if (gameState.gameOver) return;
+    if (gameState.aiThinking) return;
+    if (gameState.isAIMode && gameState.currentPlayer === PLAYER.SECOND) return;
+
+    // 通常モードからドロップモードへ切り替え
+    gameState.selectedPiece = null;
+    gameState.isPassMode = false;
+    gameState.isDropMode = true;
+    gameState.selectedDropPiece = pieceType;
+
+    renderBoard();
+    renderBench();
+    updateUI();
+}
+
+// ===== 選択解除（ドロップモード対応） =====
+function cancelSelection() {
+    gameState.selectedPiece = null;
+    gameState.isPassMode = false;
+    gameState.isDropMode = false;
+    gameState.selectedDropPiece = null;
+    renderBoard();
+    renderBench();
+    updateUI();
+}
+
+// ===== ドロップ実行 =====
+function attemptDrop(targetRow, targetCol) {
+    // 空きマスでなければ無効
+    if (gameState.board[targetRow][targetCol]) {
+        cancelSelection();
+        return;
+    }
+
+    const pieceType = gameState.selectedDropPiece;
+    const currentPlayerBench = gameState.capturedPieces[gameState.currentPlayer];
+
+    // ベンチから駒を減らす
+    currentPlayerBench[pieceType]--;
+    if (currentPlayerBench[pieceType] === 0) {
+        delete currentPlayerBench[pieceType];
+    }
+
+    // 盤面に配置
+    gameState.board[targetRow][targetCol] = {
+        type: pieceType,
+        player: gameState.currentPlayer
+    };
+
+    // ログ
+    addLog(`${gameState.currentPlayer === PLAYER.FIRST ? '先手' : '後手'}：${pieceType}を(${targetRow},${targetCol})に投入`);
+
+    // ドロップモード解除
+    gameState.isDropMode = false;
+    gameState.selectedDropPiece = null;
+
+    renderBoard();
+    renderBench();
+    updateUI();
+
+    // ターン交代
+    nextTurn();
+}
+
 // ===== セルクリック処理 =====
 function handleCellClick(row, col) {
     if (gameState.gameOver) return;
@@ -329,6 +447,12 @@ function handleCellClick(row, col) {
     if (gameState.isAIMode && gameState.currentPlayer === PLAYER.SECOND) return;
 
     const piece = gameState.board[row][col];
+
+    // ドロップモード
+    if (gameState.isDropMode) {
+        attemptDrop(row, col);
+        return;
+    }
 
     // 駒選択
     if (!gameState.selectedPiece) {
@@ -382,6 +506,19 @@ function setActionMode(mode) {
 // ===== 合法手ハイライト =====
 function highlightValidMoves() {
     renderBoard();
+
+    // ドロップモード：空きマスをハイライト
+    if (gameState.isDropMode) {
+        for (let row = 0; row < BOARD_SIZE; row++) {
+            for (let col = 0; col < BOARD_SIZE; col++) {
+                if (!gameState.board[row][col]) {
+                    const cell = boardElement.children[row * BOARD_SIZE + col];
+                    cell.classList.add('valid-drop');
+                }
+            }
+        }
+        return;
+    }
 
     if (!gameState.selectedPiece) return;
 
@@ -582,6 +719,14 @@ function attemptMove(targetRow, targetCol) {
             logMessage += '（ボール奪取！）';
         }
 
+        // ベンチに追加
+        const currentPlayerBench = gameState.capturedPieces[gameState.currentPlayer];
+        if (!currentPlayerBench[capturedPiece.type]) {
+            currentPlayerBench[capturedPiece.type] = 0;
+        }
+        currentPlayerBench[capturedPiece.type]++;
+        logMessage += '（ベンチに追加）';
+
         // 玉を捕獲しても勝利にはならない（ゴールのみが勝利条件）
     }
 
@@ -744,6 +889,9 @@ function updateUI() {
         ballHolderCompactElement.textContent = `中央`;
     }
 
+    // ベンチ描画
+    renderBench();
+
     // ガイドテキスト更新
     updateGuideText();
 
@@ -755,10 +903,11 @@ function updateUI() {
                     gameState.ball.holder.col === gameState.selectedPiece.col;
 
     const isAITurn = gameState.isAIMode && gameState.currentPlayer === PLAYER.SECOND;
+    const hasDropSelection = gameState.isDropMode && gameState.selectedDropPiece;
 
-    moveBtn.disabled = !hasSelection || gameState.gameOver || gameState.aiThinking || isAITurn;
-    passBtn.disabled = !hasBall || gameState.gameOver || gameState.aiThinking || isAITurn;
-    cancelBtn.disabled = !hasSelection || gameState.gameOver || gameState.aiThinking || isAITurn;
+    moveBtn.disabled = !hasSelection || gameState.gameOver || gameState.aiThinking || isAITurn || hasDropSelection;
+    passBtn.disabled = !hasBall || gameState.gameOver || gameState.aiThinking || isAITurn || hasDropSelection;
+    cancelBtn.disabled = (!hasSelection && !hasDropSelection) || gameState.gameOver || gameState.aiThinking || isAITurn;
 }
 
 // ===== ガイドテキスト更新 =====
@@ -770,6 +919,11 @@ function updateGuideText() {
 
     if (gameState.aiThinking) {
         guideTextElement.textContent = '🤖 AI thinking...';
+        return;
+    }
+
+    if (gameState.isDropMode) {
+        guideTextElement.textContent = '紫マス = 配置可能。空きマスをタップしてベンチから投入';
         return;
     }
 
@@ -872,6 +1026,26 @@ function findBestAIMove() {
         }
     }
 
+    // ドロップ可能な手を列挙
+    const aiBench = gameState.capturedPieces[PLAYER.SECOND];
+    Object.entries(aiBench).forEach(([pieceType, count]) => {
+        if (count > 0) {
+            // 空きマス全てにドロップ可能
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    if (!gameState.board[row][col]) {
+                        allMoves.push({
+                            type: 'drop',
+                            pieceType,
+                            toRow: row,
+                            toCol: col
+                        });
+                    }
+                }
+            }
+        }
+    });
+
     if (allMoves.length === 0) return null;
 
     // 各手を評価
@@ -893,6 +1067,37 @@ function evaluateAIMove(move) {
     // AI（後手）のゴールは最下段（row 8）、相手（先手）のゴールは最上段（row 0）
     const aiGoals = GOALS[PLAYER.SECOND]; // 最下段 row 8
     const opponentGoals = GOALS[PLAYER.FIRST]; // 最上段 row 0
+
+    // ドロップの場合の評価
+    if (move.type === 'drop') {
+        // 基本スコア
+        score = 30;
+
+        // 自ゴール周辺への配置を評価（防御）
+        const distFromOwnGoal = Math.abs(move.toRow - 8);
+        if (distFromOwnGoal <= 2) {
+            score += 20; // ゴール前の防御強化
+        }
+
+        // ボール周辺への配置を評価
+        let ballRow, ballCol;
+        if (gameState.ball.holder) {
+            ballRow = gameState.ball.holder.row;
+            ballCol = gameState.ball.holder.col;
+        } else {
+            ballRow = gameState.ball.row;
+            ballCol = gameState.ball.col;
+        }
+        const distToBall = Math.abs(move.toRow - ballRow) + Math.abs(move.toCol - ballCol);
+        if (distToBall <= 2) {
+            score += 15; // ボール付近に配置
+        }
+
+        // ランダム性
+        score += Math.random() * 5;
+
+        return score;
+    }
 
     // ボール位置の取得
     let ballRow, ballCol;
@@ -991,6 +1196,14 @@ function executeAIMove(move) {
                 gameState.ball.holder = { row: move.toRow, col: move.toCol };
                 logMessage += '（ボール奪取！）';
             }
+
+            // ベンチに追加
+            const aiBench = gameState.capturedPieces[PLAYER.SECOND];
+            if (!aiBench[capturedPiece.type]) {
+                aiBench[capturedPiece.type] = 0;
+            }
+            aiBench[capturedPiece.type]++;
+            logMessage += '（ベンチに追加）';
         }
 
         // ボール取得
@@ -1035,6 +1248,26 @@ function executeAIMove(move) {
         if (checkGoal(move.toRow, move.toCol)) {
             return;
         }
+
+        // ターン交代
+        nextTurn();
+    } else if (move.type === 'drop') {
+        // ドロップを実行
+        const aiBench = gameState.capturedPieces[PLAYER.SECOND];
+
+        // ベンチから駒を減らす
+        aiBench[move.pieceType]--;
+        if (aiBench[move.pieceType] === 0) {
+            delete aiBench[move.pieceType];
+        }
+
+        // 盤面に配置
+        gameState.board[move.toRow][move.toCol] = {
+            type: move.pieceType,
+            player: PLAYER.SECOND
+        };
+
+        addLog(`後手（AI）：${move.pieceType}を(${move.toRow},${move.toCol})に投入`);
 
         // ターン交代
         nextTurn();

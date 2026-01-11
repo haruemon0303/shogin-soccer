@@ -357,6 +357,106 @@ main {
     }
 }
 
+/* ベンチ（捕獲した駒） */
+.bench-section {
+    margin-bottom: 15px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bench-title {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #555;
+    text-align: center;
+}
+
+.bench-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    min-height: 50px;
+    align-items: center;
+}
+
+.bench-piece {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 3px solid transparent;
+}
+
+.bench-piece.first {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+}
+
+.bench-piece.second {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.bench-piece:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bench-piece.selected {
+    border-color: #f39c12;
+    box-shadow: 0 0 0 2px #f39c12, 0 0 12px rgba(243, 156, 18, 0.6);
+}
+
+.bench-piece-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #f39c12;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 2px solid white;
+}
+
+.bench-empty {
+    text-align: center;
+    color: #999;
+    font-size: 0.9rem;
+    padding: 15px;
+}
+
+/* ドロップ可能マス */
+.cell.valid-drop {
+    background: #9b59b6 !important;
+    animation: pulse-drop 1s infinite;
+    cursor: pointer;
+}
+
+@keyframes pulse-drop {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
 /* 確認バー */
 .action-bar {
     display: flex;
