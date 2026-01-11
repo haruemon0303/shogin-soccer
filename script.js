@@ -62,10 +62,13 @@ let boardElement;
 let turnPlayerElement;
 let ballHolderElement;
 let logContentElement;
+let guideTextElement;
+let moveBtn;
+let passBtn;
 let cancelBtn;
-let passModeBtn;
 let resetBtn;
 let gameOverModal;
+let tutorialModal;
 
 // ===== 初期化 =====
 function init() {
@@ -74,22 +77,46 @@ function init() {
     turnPlayerElement = document.getElementById('turnPlayer');
     ballHolderElement = document.getElementById('ballHolder');
     logContentElement = document.getElementById('logContent');
+    guideTextElement = document.getElementById('guideText');
+    moveBtn = document.getElementById('moveBtn');
+    passBtn = document.getElementById('passBtn');
     cancelBtn = document.getElementById('cancelBtn');
-    passModeBtn = document.getElementById('passModeBtn');
     resetBtn = document.getElementById('resetBtn');
     gameOverModal = document.getElementById('gameOverModal');
+    tutorialModal = document.getElementById('tutorialModal');
 
     // イベントリスナー
+    moveBtn.addEventListener('click', () => setActionMode('move'));
+    passBtn.addEventListener('click', () => setActionMode('pass'));
     cancelBtn.addEventListener('click', cancelSelection);
-    passModeBtn.addEventListener('click', togglePassMode);
     resetBtn.addEventListener('click', resetGame);
     document.getElementById('gameOverResetBtn').addEventListener('click', () => {
         gameOverModal.classList.remove('show');
         resetGame();
     });
+    document.getElementById('tutorialCloseBtn').addEventListener('click', closeTutorial);
+
+    // チュートリアル表示
+    showTutorialIfFirstTime();
 
     // ゲーム開始
     resetGame();
+}
+
+// ===== チュートリアル =====
+function showTutorialIfFirstTime() {
+    const hasSeenTutorial = localStorage.getItem('shogin-soccer-tutorial-seen');
+    if (!hasSeenTutorial) {
+        tutorialModal.classList.add('show');
+    }
+}
+
+function closeTutorial() {
+    const noShow = document.getElementById('noShowTutorial').checked;
+    if (noShow) {
+        localStorage.setItem('shogin-soccer-tutorial-seen', 'true');
+    }
+    tutorialModal.classList.remove('show');
 }
 
 // ===== ゲームリセット =====
@@ -149,6 +176,7 @@ function renderBoard() {
                 if (gameState.ball.holder &&
                     gameState.ball.holder.row === row &&
                     gameState.ball.holder.col === col) {
+                    pieceElement.classList.add('has-ball');
                     const ballIndicator = document.createElement('div');
                     ballIndicator.className = 'ball-indicator';
                     pieceElement.appendChild(ballIndicator);
@@ -212,19 +240,18 @@ function cancelSelection() {
     updateUI();
 }
 
-// ===== パスモード切替 =====
-function togglePassMode() {
+// ===== アクションモード設定 =====
+function setActionMode(mode) {
     if (!gameState.selectedPiece) return;
 
-    // ボール保持確認
-    const piece = gameState.selectedPiece;
-    if (!gameState.ball.holder ||
-        gameState.ball.holder.row !== piece.row ||
-        gameState.ball.holder.col !== piece.col) {
-        return;
+    if (mode === 'pass') {
+        // パスモードに切り替え
+        gameState.isPassMode = true;
+    } else {
+        // 移動モードに切り替え
+        gameState.isPassMode = false;
     }
 
-    gameState.isPassMode = !gameState.isPassMode;
     highlightValidMoves();
     updateUI();
 }
@@ -242,15 +269,29 @@ function highlightValidMoves() {
     const selectedCell = boardElement.children[row * BOARD_SIZE + col];
     selectedCell.classList.add('selected');
 
-    // 移動可能マスまたはパス可能マスをハイライト
-    const validMoves = gameState.isPassMode
-        ? getValidPassTargets(row, col, piece)
-        : getValidMoves(row, col, piece);
+    if (gameState.isPassMode) {
+        // パスモード：パス可能マスをハイライト
+        const validPasses = getValidPassTargets(row, col, piece);
+        validPasses.forEach(({ row: r, col: c }) => {
+            const cell = boardElement.children[r * BOARD_SIZE + c];
+            cell.classList.add('valid-pass');
+        });
+    } else {
+        // 移動モード：移動可能マスと捕獲可能マスを区別
+        const validMoves = getValidMoves(row, col, piece);
+        validMoves.forEach(({ row: r, col: c }) => {
+            const cell = boardElement.children[r * BOARD_SIZE + c];
+            const targetPiece = gameState.board[r][c];
 
-    validMoves.forEach(({ row: r, col: c }) => {
-        const cell = boardElement.children[r * BOARD_SIZE + c];
-        cell.classList.add(gameState.isPassMode ? 'valid-pass' : 'valid-move');
-    });
+            if (targetPiece && targetPiece.player !== piece.player) {
+                // 捕獲可能（相手駒）
+                cell.classList.add('valid-capture');
+            } else {
+                // 移動可能（空きマス）
+                cell.classList.add('valid-move');
+            }
+        });
+    }
 }
 
 // ===== 合法手取得 =====
@@ -512,22 +553,46 @@ function updateUI() {
         ballHolderElement.textContent = `盤面(${gameState.ball.row},${gameState.ball.col})`;
     }
 
-    // ボタン制御
+    // ガイドテキスト更新
+    updateGuideText();
+
+    // 確認バーの制御
     const hasSelection = !!gameState.selectedPiece;
     const hasBall = gameState.ball.holder &&
                     gameState.selectedPiece &&
                     gameState.ball.holder.row === gameState.selectedPiece.row &&
                     gameState.ball.holder.col === gameState.selectedPiece.col;
 
+    moveBtn.disabled = !hasSelection || gameState.gameOver;
+    passBtn.disabled = !hasBall || gameState.gameOver;
     cancelBtn.disabled = !hasSelection || gameState.gameOver;
-    passModeBtn.disabled = !hasBall || gameState.gameOver;
+}
 
-    if (gameState.isPassMode) {
-        passModeBtn.classList.add('active');
-        passModeBtn.textContent = '移動モード';
+// ===== ガイドテキスト更新 =====
+function updateGuideText() {
+    if (gameState.gameOver) {
+        guideTextElement.textContent = `🎉 ${gameState.winner === PLAYER.FIRST ? '先手（青）' : '後手（赤）'}の勝利！`;
+        return;
+    }
+
+    const hasSelection = !!gameState.selectedPiece;
+    const hasBall = gameState.ball.holder &&
+                    gameState.selectedPiece &&
+                    gameState.ball.holder.row === gameState.selectedPiece.row &&
+                    gameState.ball.holder.col === gameState.selectedPiece.col;
+
+    if (!hasSelection) {
+        // 駒未選択
+        guideTextElement.textContent = '駒をタップして選択してください';
+    } else if (gameState.isPassMode) {
+        // パスモード
+        guideTextElement.textContent = '緑マス = パス先。タップしてパスしてください';
+    } else if (hasBall) {
+        // ボール保持中
+        guideTextElement.textContent = '青 = 移動 / 緑 = パス / 赤枠 = 捕獲。移動先をタップまたは「パス」ボタンでパス';
     } else {
-        passModeBtn.classList.remove('active');
-        passModeBtn.textContent = 'パスモード';
+        // 通常の駒選択中
+        guideTextElement.textContent = '青 = 移動 / 赤枠 = 捕獲。移動先をタップしてください';
     }
 }
 

@@ -26,6 +26,12 @@
                 </div>
             </div>
 
+            <!-- 操作ガイド -->
+            <div class="action-guide" id="actionGuide">
+                <span class="guide-icon">💡</span>
+                <span class="guide-text" id="guideText">駒をタップして選択してください</span>
+            </div>
+
             <!-- 盤面 -->
             <div class="board-container">
                 <div class="board" id="board">
@@ -33,10 +39,23 @@
                 </div>
             </div>
 
+            <!-- 確認バー（選択時に表示） -->
+            <div class="action-bar" id="actionBar">
+                <button id="moveBtn" class="action-btn action-move" disabled>
+                    <span class="btn-label">移動</span>
+                    <span class="btn-hint">青マス</span>
+                </button>
+                <button id="passBtn" class="action-btn action-pass" disabled>
+                    <span class="btn-label">パス</span>
+                    <span class="btn-hint">緑マス</span>
+                </button>
+                <button id="cancelBtn" class="action-btn action-cancel" disabled>
+                    <span class="btn-label">選択解除</span>
+                </button>
+            </div>
+
             <!-- コントロールボタン -->
             <div class="controls">
-                <button id="cancelBtn" class="btn btn-cancel" disabled>選択解除</button>
-                <button id="passModeBtn" class="btn btn-pass" disabled>パスモード</button>
                 <button id="resetBtn" class="btn btn-reset">ゲームリセット</button>
             </div>
 
@@ -45,6 +64,28 @@
                 <h3>ゲームログ</h3>
                 <div id="logContent" class="log-content">
                     <p>ゲーム開始！先手（青）の番です。</p>
+                </div>
+            </div>
+
+            <!-- 初回チュートリアル -->
+            <div id="tutorialModal" class="modal">
+                <div class="modal-content tutorial-content">
+                    <h2>🎮 SHOGIN サッカーへようこそ！</h2>
+                    <div class="tutorial-steps">
+                        <h3>3行まとめ</h3>
+                        <ol class="tutorial-summary">
+                            <li>将棋の駒を動かしてボールを相手ゴール（最下段の赤3マス）に運ぶ</li>
+                            <li>駒をタップ → <strong style="color: #3498db;">青マス</strong>で移動、<strong style="color: #2ecc71;">緑マス</strong>でパス、<strong style="color: #e74c3c;">赤枠</strong>で捕獲</li>
+                            <li>ボールを持った駒は<strong style="color: #f39c12;">⚽マーク</strong>が付きます</li>
+                        </ol>
+                        <h3>最初の一手を試してみましょう</h3>
+                        <p class="tutorial-hint">中央の⚽をタップして、ボールを取ってみましょう！</p>
+                    </div>
+                    <button id="tutorialCloseBtn" class="btn btn-primary">プレイ開始！</button>
+                    <label class="tutorial-checkbox">
+                        <input type="checkbox" id="noShowTutorial">
+                        次回から表示しない
+                    </label>
                 </div>
             </div>
 
@@ -62,18 +103,32 @@
             <details>
                 <summary>ルール説明</summary>
                 <div class="rules">
+                    <div class="rules-summary">
+                        <h3>3行まとめ</h3>
+                        <ol>
+                            <li>将棋の駒を動かしてボールを相手ゴールに運ぶ</li>
+                            <li>駒タップ → 青マス=移動、緑マス=パス、赤枠=捕獲</li>
+                            <li>ボール保持者には⚽マークが付きます</li>
+                        </ol>
+                    </div>
                     <h3>基本ルール</h3>
                     <ul>
                         <li><strong>勝利条件：</strong>ボールを相手ゴールに運ぶ、または相手の玉（GK）を捕獲</li>
                         <li><strong>操作：</strong>駒をタップして選択 → 移動先をタップ</li>
-                        <li><strong>パス：</strong>ボール保持駒を選択 → パスモードボタン → パス先をタップ</li>
+                        <li><strong>パス：</strong>ボール保持駒を選択後、緑のマスをタップでパス</li>
                         <li><strong>駒の動き：</strong>将棋のルールに準拠（玉・飛・角・歩）</li>
-                        <li><strong>捕獲：</strong>相手駒のマスに移動すると捕獲できます</li>
+                        <li><strong>捕獲：</strong>相手駒のマス（赤枠）に移動すると捕獲できます</li>
                     </ul>
                     <h3>ゴール位置</h3>
                     <ul>
-                        <li><strong>先手ゴール：</strong>最上段の中央3マス（色付き）</li>
-                        <li><strong>後手ゴール：</strong>最下段の中央3マス（色付き）</li>
+                        <li><strong>先手ゴール：</strong>最上段の中央3マス（青色）</li>
+                        <li><strong>後手ゴール：</strong>最下段の中央3マス（赤色）</li>
+                    </ul>
+                    <h3>ハイライトの意味</h3>
+                    <ul>
+                        <li><strong style="color: #3498db;">青マス：</strong>移動可能な空きマス</li>
+                        <li><strong style="color: #2ecc71;">緑マス：</strong>パス可能なマス（ボール保持時）</li>
+                        <li><strong style="color: #e74c3c;">赤枠：</strong>捕獲可能な相手駒</li>
                     </ul>
                 </div>
             </details>
