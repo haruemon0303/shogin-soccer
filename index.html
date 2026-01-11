@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SHOGIN サッカー</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SHOGIN サッカー</h1>
+            <p class="subtitle">将棋×サッカー タクティカルゲーム</p>
+        </header>
+
+        <main>
+            <!-- ゲーム情報 -->
+            <div class="game-info">
+                <div class="turn-info">
+                    <span class="turn-label">手番:</span>
+                    <span class="turn-player" id="turnPlayer">先手（青）</span>
+                </div>
+                <div class="ball-info">
+                    <span class="ball-label">ボール:</span>
+                    <span class="ball-holder" id="ballHolder">中央</span>
+                </div>
+            </div>
+
+            <!-- 盤面 -->
+            <div class="board-container">
+                <div class="board" id="board">
+                    <!-- 9x9 = 81マスを動的に生成 -->
+                </div>
+            </div>
+
+            <!-- コントロールボタン -->
+            <div class="controls">
+                <button id="cancelBtn" class="btn btn-cancel" disabled>選択解除</button>
+                <button id="passModeBtn" class="btn btn-pass" disabled>パスモード</button>
+                <button id="resetBtn" class="btn btn-reset">ゲームリセット</button>
+            </div>
+
+            <!-- ゲームログ -->
+            <div class="game-log">
+                <h3>ゲームログ</h3>
+                <div id="logContent" class="log-content">
+                    <p>ゲーム開始！先手（青）の番です。</p>
+                </div>
+            </div>
+
+            <!-- 勝利メッセージ -->
+            <div id="gameOverModal" class="modal">
+                <div class="modal-content">
+                    <h2 id="gameOverTitle">勝利！</h2>
+                    <p id="gameOverMessage"></p>
+                    <button id="gameOverResetBtn" class="btn btn-primary">もう一度プレイ</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <details>
+                <summary>ルール説明</summary>
+                <div class="rules">
+                    <h3>基本ルール</h3>
+                    <ul>
+                        <li><strong>勝利条件：</strong>ボールを相手ゴールに運ぶ、または相手の玉（GK）を捕獲</li>
+                        <li><strong>操作：</strong>駒をタップして選択 → 移動先をタップ</li>
+                        <li><strong>パス：</strong>ボール保持駒を選択 → パスモードボタン → パス先をタップ</li>
+                        <li><strong>駒の動き：</strong>将棋のルールに準拠（玉・飛・角・歩）</li>
+                        <li><strong>捕獲：</strong>相手駒のマスに移動すると捕獲できます</li>
+                    </ul>
+                    <h3>ゴール位置</h3>
+                    <ul>
+                        <li><strong>先手ゴール：</strong>最上段の中央3マス（色付き）</li>
+                        <li><strong>後手ゴール：</strong>最下段の中央3マス（色付き）</li>
+                    </ul>
+                </div>
+            </details>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
