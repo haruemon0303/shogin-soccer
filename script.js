@@ -39,7 +39,9 @@ let gameState = {
     isPassMode: false,   // パスモード
     gameOver: false,
     winner: null,
-    formationType: null  // 選択された配置タイプ
+    formationType: null, // 選択された配置タイプ
+    isAIMode: false,     // AI対戦モード
+    aiThinking: false    // AI思考中
 };
 
 // ===== 初期配置（将棋配置） =====
@@ -147,6 +149,8 @@ let resetBtn;
 let gameOverModal;
 let tutorialModal;
 let formationModal;
+let localModeBtn;
+let aiModeBtn;
 
 // ===== 初期化 =====
 function init() {
@@ -179,8 +183,23 @@ function init() {
     document.getElementById('shogiFormationBtn').addEventListener('click', () => startGameWithFormation('shogi'));
     document.getElementById('soccerFormationBtn').addEventListener('click', () => startGameWithFormation('soccer'));
 
+    // モード選択
+    localModeBtn = document.getElementById('localModeBtn');
+    aiModeBtn = document.getElementById('aiModeBtn');
+    localModeBtn.addEventListener('click', () => selectMode('local'));
+    aiModeBtn.addEventListener('click', () => selectMode('ai'));
+
     // 配置選択から開始
     showFormationSelection();
+}
+
+// ===== モード選択 =====
+function selectMode(mode) {
+    gameState.isAIMode = (mode === 'ai');
+
+    // ボタンのアクティブ状態を切り替え
+    localModeBtn.classList.toggle('active', mode === 'local');
+    aiModeBtn.classList.toggle('active', mode === 'ai');
 }
 
 // ===== 配置選択 =====
@@ -235,10 +254,12 @@ function resetGame() {
     gameState.isPassMode = false;
     gameState.gameOver = false;
     gameState.winner = null;
+    gameState.aiThinking = false;
 
     // ログクリア
     const formationName = gameState.formationType === 'shogi' ? '将棋配置' : 'サッカー配置';
-    logContentElement.innerHTML = `<p>ゲーム開始！${formationName}で対戦します。</p><p>先手（青）の番です。</p>`;
+    const modeText = gameState.isAIMode ? 'AI対戦' : 'ローカル2人対戦';
+    logContentElement.innerHTML = `<p>ゲーム開始！${formationName}（${modeText}）で対戦します。</p><p>先手（青）の番です。</p>`;
 
     // 盤面描画
     renderBoard();
@@ -302,6 +323,10 @@ function renderBoard() {
 // ===== セルクリック処理 =====
 function handleCellClick(row, col) {
     if (gameState.gameOver) return;
+    if (gameState.aiThinking) return; // AI思考中は操作不可
+
+    // AIモードでAIの番は操作不可
+    if (gameState.isAIMode && gameState.currentPlayer === PLAYER.SECOND) return;
 
     const piece = gameState.board[row][col];
 
@@ -372,7 +397,15 @@ function highlightValidMoves() {
         const validPasses = getValidPassTargets(row, col, piece);
         validPasses.forEach(({ row: r, col: c }) => {
             const cell = boardElement.children[r * BOARD_SIZE + c];
-            cell.classList.add('valid-pass');
+            const targetPiece = gameState.board[r][c];
+
+            if (targetPiece && targetPiece.player === piece.player) {
+                // 味方駒へのパス（強調表示）
+                cell.classList.add('valid-pass-to-ally');
+            } else {
+                // 空きマスへのスルーパス
+                cell.classList.add('valid-pass');
+            }
         });
     } else {
         // 移動モード：移動可能マスと捕獲可能マスを区別
@@ -419,13 +452,18 @@ function getValidMoves(row, col, piece) {
     return moves;
 }
 
-// ===== パス可能マス取得 =====
+// ===== パス可能マス取得（視線ベース） =====
 function getValidPassTargets(row, col, piece) {
     const targets = [];
-    const directions = getPieceDirections(piece.type, piece.player);
+    // 8方向の視線パス（縦/横/斜め）
+    const directions = [
+        { dr: -1, dc: -1 }, { dr: -1, dc: 0 }, { dr: -1, dc: 1 },
+        { dr: 0, dc: -1 },                      { dr: 0, dc: 1 },
+        { dr: 1, dc: -1 },  { dr: 1, dc: 0 },  { dr: 1, dc: 1 }
+    ];
 
-    directions.forEach(({ dr, dc, range }) => {
-        for (let i = 1; i <= range; i++) {
+    directions.forEach(({ dr, dc }) => {
+        for (let i = 1; i < BOARD_SIZE; i++) {
             const newRow = row + dr * i;
             const newCol = col + dc * i;
 
@@ -433,16 +471,17 @@ function getValidPassTargets(row, col, piece) {
 
             const targetPiece = gameState.board[newRow][newCol];
 
-            // 空きマスまたは味方の駒（パス可能）
-            if (!targetPiece || targetPiece.player === piece.player) {
+            if (!targetPiece) {
+                // 空きマスへのスルーパス可能
                 targets.push({ row: newRow, col: newCol });
+            } else if (targetPiece.player === piece.player) {
+                // 味方駒へパス可能（視線の終端）
+                targets.push({ row: newRow, col: newCol });
+                break;
+            } else {
+                // 相手駒で視線がブロックされる
+                break;
             }
-
-            // 相手の駒があったら進めない
-            if (targetPiece && targetPiece.player !== piece.player) break;
-
-            // 味方の駒があったら進めない（受け取りは可）
-            if (targetPiece && targetPiece.player === piece.player) break;
         }
     });
 
@@ -543,11 +582,7 @@ function attemptMove(targetRow, targetCol) {
             logMessage += '（ボール奪取！）';
         }
 
-        // 玉を捕獲したら勝利
-        if (capturedPiece.type === PIECE_TYPE.KING) {
-            endGame(gameState.currentPlayer, `${piece.player === PLAYER.FIRST ? '先手' : '後手'}が相手の玉を捕獲！`);
-            return;
-        }
+        // 玉を捕獲しても勝利にはならない（ゴールのみが勝利条件）
     }
 
     // ボール取得
@@ -634,6 +669,16 @@ function checkGoal(row, col) {
         return true;
     }
 
+    // 自分のゴールか確認（オウンゴール）
+    const ownGoals = GOALS[gameState.currentPlayer];
+    const isOwnGoal = ownGoals.some(g => g.row === row && g.col === col);
+
+    if (isOwnGoal) {
+        const winner = gameState.currentPlayer === PLAYER.FIRST ? PLAYER.SECOND : PLAYER.FIRST;
+        endGame(winner, `${gameState.currentPlayer === PLAYER.FIRST ? '先手' : '後手'}がオウンゴール！${winner === PLAYER.FIRST ? '先手' : '後手'}の勝利！`);
+        return true;
+    }
+
     return false;
 }
 
@@ -653,6 +698,11 @@ function nextTurn() {
 
     renderBoard();
     updateUI();
+
+    // AIの番ならAI思考を実行
+    if (gameState.isAIMode && gameState.currentPlayer === PLAYER.SECOND && !gameState.gameOver) {
+        executeAITurn();
+    }
 }
 
 // ===== ゲーム終了 =====
@@ -704,15 +754,22 @@ function updateUI() {
                     gameState.ball.holder.row === gameState.selectedPiece.row &&
                     gameState.ball.holder.col === gameState.selectedPiece.col;
 
-    moveBtn.disabled = !hasSelection || gameState.gameOver;
-    passBtn.disabled = !hasBall || gameState.gameOver;
-    cancelBtn.disabled = !hasSelection || gameState.gameOver;
+    const isAITurn = gameState.isAIMode && gameState.currentPlayer === PLAYER.SECOND;
+
+    moveBtn.disabled = !hasSelection || gameState.gameOver || gameState.aiThinking || isAITurn;
+    passBtn.disabled = !hasBall || gameState.gameOver || gameState.aiThinking || isAITurn;
+    cancelBtn.disabled = !hasSelection || gameState.gameOver || gameState.aiThinking || isAITurn;
 }
 
 // ===== ガイドテキスト更新 =====
 function updateGuideText() {
     if (gameState.gameOver) {
         guideTextElement.textContent = `🎉 ${gameState.winner === PLAYER.FIRST ? '先手（青）' : '後手（赤）'}の勝利！`;
+        return;
+    }
+
+    if (gameState.aiThinking) {
+        guideTextElement.textContent = '🤖 AI thinking...';
         return;
     }
 
@@ -751,6 +808,237 @@ function isInBounds(row, col) {
 
 function isGoalCell(row, col, player) {
     return GOALS[player].some(g => g.row === row && g.col === col);
+}
+
+// ===== AI思考ロジック =====
+function executeAITurn() {
+    gameState.aiThinking = true;
+    updateUI();
+
+    // 0.3秒後にAI思考を実行（UIの更新を反映させるため）
+    setTimeout(() => {
+        const bestMove = findBestAIMove();
+
+        if (bestMove) {
+            executeAIMove(bestMove);
+        } else {
+            // 合法手がない場合はターン交代
+            nextTurn();
+        }
+
+        gameState.aiThinking = false;
+        updateUI();
+    }, 300);
+}
+
+function findBestAIMove() {
+    const allMoves = [];
+
+    // 全ての自分の駒について合法手を列挙
+    for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+            const piece = gameState.board[row][col];
+            if (piece && piece.player === PLAYER.SECOND) {
+                // 移動可能な手を列挙
+                const validMoves = getValidMoves(row, col, piece);
+                validMoves.forEach(({ row: targetRow, col: targetCol }) => {
+                    allMoves.push({
+                        type: 'move',
+                        fromRow: row,
+                        fromCol: col,
+                        toRow: targetRow,
+                        toCol: targetCol,
+                        piece
+                    });
+                });
+
+                // パス可能な手を列挙（ボール保持中のみ）
+                if (gameState.ball.holder &&
+                    gameState.ball.holder.row === row &&
+                    gameState.ball.holder.col === col) {
+                    const validPasses = getValidPassTargets(row, col, piece);
+                    validPasses.forEach(({ row: targetRow, col: targetCol }) => {
+                        allMoves.push({
+                            type: 'pass',
+                            fromRow: row,
+                            fromCol: col,
+                            toRow: targetRow,
+                            toCol: targetCol,
+                            piece
+                        });
+                    });
+                }
+            }
+        }
+    }
+
+    if (allMoves.length === 0) return null;
+
+    // 各手を評価
+    const evaluatedMoves = allMoves.map(move => ({
+        move,
+        score: evaluateAIMove(move)
+    }));
+
+    // スコアでソート（降順）
+    evaluatedMoves.sort((a, b) => b.score - a.score);
+
+    // 最高スコアの手を返す
+    return evaluatedMoves[0].move;
+}
+
+function evaluateAIMove(move) {
+    let score = 0;
+
+    // AI（後手）のゴールは最下段（row 8）、相手（先手）のゴールは最上段（row 0）
+    const aiGoals = GOALS[PLAYER.SECOND]; // 最下段 row 8
+    const opponentGoals = GOALS[PLAYER.FIRST]; // 最上段 row 0
+
+    // ボール位置の取得
+    let ballRow, ballCol;
+    if (gameState.ball.holder) {
+        ballRow = gameState.ball.holder.row;
+        ballCol = gameState.ball.holder.col;
+    } else {
+        ballRow = gameState.ball.row;
+        ballCol = gameState.ball.col;
+    }
+
+    // 移動後のボール位置を推定
+    let newBallRow, newBallCol;
+    if (move.type === 'pass') {
+        newBallRow = move.toRow;
+        newBallCol = move.toCol;
+    } else if (gameState.ball.holder &&
+               gameState.ball.holder.row === move.fromRow &&
+               gameState.ball.holder.col === move.fromCol) {
+        // ボール保持者が移動
+        newBallRow = move.toRow;
+        newBallCol = move.toCol;
+    } else if (!gameState.ball.holder &&
+               gameState.ball.row === move.toRow &&
+               gameState.ball.col === move.toCol) {
+        // ボールを取得
+        newBallRow = move.toRow;
+        newBallCol = move.toCol;
+    } else {
+        // ボール位置変わらず
+        newBallRow = ballRow;
+        newBallCol = ballCol;
+    }
+
+    // オウンゴール判定（絶対に避ける）
+    const isOwnGoal = aiGoals.some(g => g.row === newBallRow && g.col === newBallCol);
+    if (isOwnGoal) {
+        return -100000; // 最悪のスコア
+    }
+
+    // 相手ゴール判定（最優先）
+    const isGoal = opponentGoals.some(g => g.row === newBallRow && g.col === newBallCol);
+    if (isGoal) {
+        return 100000; // 最高のスコア
+    }
+
+    // 相手ゴールに近づく（後手は row 0 を目指す）
+    const distToOpponentGoal = Math.abs(newBallRow - 0) + Math.abs(newBallCol - 4);
+    score += (18 - distToOpponentGoal) * 10; // 近いほど高得点
+
+    // 自分ゴールから遠ざかる（後手は row 8 から遠ざかる = row が小さいほど良い）
+    const distFromOwnGoal = Math.abs(newBallRow - 8);
+    score += distFromOwnGoal * 5;
+
+    // ボール奪取
+    const targetPiece = gameState.board[move.toRow][move.toCol];
+    if (targetPiece && targetPiece.player !== PLAYER.SECOND &&
+        gameState.ball.holder &&
+        gameState.ball.holder.row === move.toRow &&
+        gameState.ball.holder.col === move.toCol) {
+        score += 50; // ボール奪取は高得点
+    }
+
+    // 駒の捕獲
+    if (targetPiece && targetPiece.player !== PLAYER.SECOND) {
+        score += 20; // 駒の捕獲も加点
+        if (targetPiece.type === PIECE_TYPE.KING) {
+            score += 10; // 玉は特に価値が高い（勝利にはならないが）
+        }
+    }
+
+    // ランダム性を少し追加（同じスコアの手がある場合のバリエーション）
+    score += Math.random() * 5;
+
+    return score;
+}
+
+function executeAIMove(move) {
+    if (move.type === 'move') {
+        // 移動を実行
+        const capturedPiece = gameState.board[move.toRow][move.toCol];
+        gameState.board[move.toRow][move.toCol] = move.piece;
+        gameState.board[move.fromRow][move.fromCol] = null;
+
+        // ログ
+        let logMessage = `後手（AI）：${move.piece.type}が(${move.fromRow},${move.fromCol})→(${move.toRow},${move.toCol})へ移動`;
+
+        // 駒捕獲
+        if (capturedPiece) {
+            logMessage += `（${capturedPiece.type}を捕獲）`;
+
+            // ボール保持者を捕獲した場合
+            if (gameState.ball.holder &&
+                gameState.ball.holder.row === move.toRow &&
+                gameState.ball.holder.col === move.toCol) {
+                gameState.ball.holder = { row: move.toRow, col: move.toCol };
+                logMessage += '（ボール奪取！）';
+            }
+        }
+
+        // ボール取得
+        if (!gameState.ball.holder &&
+            gameState.ball.row === move.toRow &&
+            gameState.ball.col === move.toCol) {
+            gameState.ball.holder = { row: move.toRow, col: move.toCol };
+            logMessage += '（ボール取得！）';
+        } else if (gameState.ball.holder &&
+                   gameState.ball.holder.row === move.fromRow &&
+                   gameState.ball.holder.col === move.fromCol) {
+            // ボール保持者が移動
+            gameState.ball.holder = { row: move.toRow, col: move.toCol };
+        }
+
+        addLog(logMessage);
+
+        // ゴール判定
+        if (checkGoal(move.toRow, move.toCol)) {
+            return;
+        }
+
+        // ターン交代
+        nextTurn();
+    } else if (move.type === 'pass') {
+        // パスを実行
+        const targetPiece = gameState.board[move.toRow][move.toCol];
+
+        if (targetPiece && targetPiece.player === PLAYER.SECOND) {
+            // 味方にパス
+            gameState.ball.holder = { row: move.toRow, col: move.toCol };
+            addLog(`後手（AI）：${move.piece.type}が(${move.toRow},${move.toCol})の${targetPiece.type}にパス！`);
+        } else {
+            // 空きマスにパス（ボールだけ移動）
+            gameState.ball.row = move.toRow;
+            gameState.ball.col = move.toCol;
+            gameState.ball.holder = null;
+            addLog(`後手（AI）：${move.piece.type}が(${move.toRow},${move.toCol})にパス`);
+        }
+
+        // ゴール判定
+        if (checkGoal(move.toRow, move.toCol)) {
+            return;
+        }
+
+        // ターン交代
+        nextTurn();
+    }
 }
 
 // ===== ゲーム開始 =====

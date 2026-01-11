@@ -87,19 +87,38 @@
             <!-- 配置選択モーダル -->
             <div id="formationModal" class="modal show">
                 <div class="modal-content formation-content">
-                    <h2>⚽ 初期配置を選択</h2>
-                    <p class="formation-desc">駒の初期配置を選んでゲームを開始します</p>
-                    <div class="formation-options">
-                        <button class="formation-btn" id="shogiFormationBtn">
-                            <h3>🎴 将棋配置</h3>
-                            <p>標準的な将棋の駒配置</p>
-                            <small>玉1・飛1・角1・金2・銀2・桂2・香2・歩9</small>
-                        </button>
-                        <button class="formation-btn" id="soccerFormationBtn">
-                            <h3>⚽ サッカー配置</h3>
-                            <p>中央寄せ4-4-2風フォーメーション</p>
-                            <small>玉1・飛1・角1・金2・銀2・歩9</small>
-                        </button>
+                    <h2>⚽ ゲーム設定</h2>
+
+                    <!-- モード選択 -->
+                    <div class="mode-selection">
+                        <p class="formation-desc">対戦モードを選択</p>
+                        <div class="mode-options">
+                            <button class="mode-btn active" id="localModeBtn">
+                                <h3>👥 ローカル2人対戦</h3>
+                                <p>同じ端末で2人対戦</p>
+                            </button>
+                            <button class="mode-btn" id="aiModeBtn">
+                                <h3>🤖 AI対戦</h3>
+                                <p>コンピューター相手に対戦</p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 配置選択 -->
+                    <div class="formation-selection">
+                        <p class="formation-desc">駒の初期配置を選択</p>
+                        <div class="formation-options">
+                            <button class="formation-btn" id="shogiFormationBtn">
+                                <h3>🎴 将棋配置</h3>
+                                <p>標準的な将棋の駒配置</p>
+                                <small>玉1・飛1・角1・金2・銀2・桂2・香2・歩9</small>
+                            </button>
+                            <button class="formation-btn" id="soccerFormationBtn">
+                                <h3>⚽ サッカー配置</h3>
+                                <p>中央寄せ4-4-2風フォーメーション</p>
+                                <small>玉1・飛2・角1・金2・銀2・歩9</small>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -150,9 +169,10 @@
                     </div>
                     <h3>基本ルール</h3>
                     <ul>
-                        <li><strong>勝利条件：</strong>ボールを相手ゴールに運ぶ、または相手の玉（GK）を捕獲</li>
+                        <li><strong>勝利条件：</strong>ボールを相手ゴールに運ぶ（ゴールのみが勝利条件）</li>
+                        <li><strong>オウンゴール：</strong>ボールが自分のゴールに到達すると敗北</li>
                         <li><strong>操作：</strong>駒をタップして選択 → 移動先をタップ</li>
-                        <li><strong>パス：</strong>ボール保持駒を選択後、緑のマスをタップでパス</li>
+                        <li><strong>パス：</strong>ボール保持駒を選択後、緑/金枠のマスをタップでパス（視線ベース・8方向）</li>
                         <li><strong>駒の動き：</strong>将棋のルールに準拠（玉・飛・角・歩）</li>
                         <li><strong>捕獲：</strong>相手駒のマス（赤枠）に移動すると捕獲できます</li>
                     </ul>
@@ -164,7 +184,8 @@
                     <h3>ハイライトの意味</h3>
                     <ul>
                         <li><strong style="color: #3498db;">青マス：</strong>移動可能な空きマス</li>
-                        <li><strong style="color: #2ecc71;">緑マス：</strong>パス可能なマス（ボール保持時）</li>
+                        <li><strong style="color: #2ecc71;">緑マス：</strong>パス可能な空きマス（スルーパス）</li>
+                        <li><strong style="color: #f39c12;">金枠：</strong>パス可能な味方駒（味方へのパス）</li>
                         <li><strong style="color: #e74c3c;">赤枠：</strong>捕獲可能な相手駒</li>
                     </ul>
                 </div>
